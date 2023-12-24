@@ -29,5 +29,5 @@ This program is available for download for non-commercial use, licensed under th
 ## Files
 The repository contains the following files:
 
-- `model.py`: Python script file, containing the PyTorch implementation of the DeepLabV3+.
+- `DeepLab_V3_Plus.py`: Python script file, containing the PyTorch implementation of the DeepLabV3+.
 - `README.md`: Markdown file explaining the model source code.
