@@ -1,5 +1,5 @@
 
-# Implementation of DeepLabV3+ based on PyTorch
+# Implementation of DeepLabV3+ using PyTorch Deep Learning Framework
 
 The architecture was inspired by Attention-guided version of 2D UNet for automatic brain tumor segmentation. 
 
