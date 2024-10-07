@@ -51,7 +51,7 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, in_channels, block, layers, output_stride, BatchNorm, pretrained=True):
+    def __init__(self, in_channels, block, layers, output_stride, BatchNorm, pretrained=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
         blocks = [1, 2, 4]
