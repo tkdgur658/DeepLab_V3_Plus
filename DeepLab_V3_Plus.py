@@ -823,5 +823,5 @@ class DeepLab_V3_Plus(nn.Module):
         return x
 
 
-DeepLab_V3_Plus(1,1)(torch.rand(4, 1, 512, 512)).shape
-torch.Size([4, 1, 512, 512])
+# DeepLab_V3_Plus(1,1)(torch.rand(4, 1, 512, 512)).shape
+# torch.Size([4, 1, 512, 512])
