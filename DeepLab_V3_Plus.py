@@ -1,18 +1,14 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
+# Chen, Liang-Chieh, et al. "Encoder-decoder with atrous separable convolution for semantic image segmentation." Proceedings of the European conference on computer vision (ECCV). 2018.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
-import collections
-import queue
-import torch
-import torch.nn.functional as F
-
 from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.parallel._functions import ReduceAddCoalesced, Broadcast
+import math
+import queue
+import collections
+
 
 class Bottleneck(nn.Module):
     expansion = 4
@@ -80,7 +76,6 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=strides[2], dilation=dilations[2], BatchNorm=BatchNorm)
         self.layer4 = self._make_MG_unit(block, 512, blocks=blocks, stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
         # self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], dilation=dilations[3], BatchNorm=BatchNorm)
-        self._init_weight()
 
         if pretrained:
             self._load_pretrained_model()
@@ -133,19 +128,6 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         return x, low_level_feat
-
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
     def _load_pretrained_model(self):
         pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet101-5d3b4d8f.pth')
         model_dict = {}
@@ -620,8 +602,6 @@ class AlignedXception(nn.Module):
         self.conv5 = SeparableConv2d(1536, 2048, 3, stride=1, dilation=exit_block_dilations[1], BatchNorm=BatchNorm)
         self.bn5 = BatchNorm(2048)
 
-        # Init weights
-        self._init_weight()
 
         # Load pretrained model
         if pretrained:
@@ -679,19 +659,6 @@ class AlignedXception(nn.Module):
 
         return x, low_level_feat
 
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-
     def _load_pretrained_model(self):
         pretrain_dict = model_zoo.load_url('http://data.lip6.fr/cadene/pretrainedmodels/xception-b5690688.pth')
         model_dict = {}
@@ -733,24 +700,13 @@ class _ASPPModule(nn.Module):
         self.bn = BatchNorm(planes)
         self.relu = nn.ReLU()
 
-        self._init_weight()
+
 
     def forward(self, x):
         x = self.atrous_conv(x)
         x = self.bn(x)
 
         return self.relu(x)
-
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                torch.nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
 
 class ASPP(nn.Module):
     def __init__(self, backbone, output_stride, BatchNorm):
@@ -781,7 +737,7 @@ class ASPP(nn.Module):
         self.bn1 = BatchNorm(256)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
-        self._init_weight()
+
 
     def forward(self, x):
         x1 = self.aspp1(x)
@@ -797,19 +753,6 @@ class ASPP(nn.Module):
         x = self.relu(x)
 
         return self.dropout(x)
-
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                # m.weight.data.normal_(0, math.sqrt(2. / n))
-                torch.nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
 
 
 def build_aspp(backbone, output_stride, BatchNorm):
@@ -838,8 +781,6 @@ class Decoder(nn.Module):
                                        nn.ReLU(),
                                        nn.Dropout(0.1),
                                        nn.Conv2d(256, num_classes, kernel_size=1, stride=1))
-        self._init_weight()
-
 
     def forward(self, x, low_level_feat):
         low_level_feat = self.conv1(low_level_feat)
@@ -852,16 +793,6 @@ class Decoder(nn.Module):
 
         return x
 
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                torch.nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, SynchronizedBatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
 
 def build_decoder(num_classes, backbone, BatchNorm):
     return Decoder(num_classes, backbone, BatchNorm)
@@ -891,44 +822,6 @@ class DeepLab_V3_Plus(nn.Module):
 
         return x
 
-    def freeze_bn(self):
-        for m in self.modules():
-            if isinstance(m, SynchronizedBatchNorm2d):
-                m.eval()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.eval()
 
-    def get_1x_lr_params(self):
-        modules = [self.backbone]
-        for i in range(len(modules)):
-            for m in modules[i].named_modules():
-                if self.freeze_bn:
-                    if isinstance(m[1], nn.Conv2d):
-                        for p in m[1].parameters():
-                            if p.requires_grad:
-                                yield p
-                else:
-                    if isinstance(m[1], nn.Conv2d) or isinstance(m[1], SynchronizedBatchNorm2d) \
-                            or isinstance(m[1], nn.BatchNorm2d):
-                        for p in m[1].parameters():
-                            if p.requires_grad:
-                                yield p
-
-    def get_10x_lr_params(self):
-        modules = [self.aspp, self.decoder]
-        for i in range(len(modules)):
-            for m in modules[i].named_modules():
-                if self.freeze_bn:
-                    if isinstance(m[1], nn.Conv2d):
-                        for p in m[1].parameters():
-                            if p.requires_grad:
-                                yield p
-                else:
-                    if isinstance(m[1], nn.Conv2d) or isinstance(m[1], SynchronizedBatchNorm2d) \
-                            or isinstance(m[1], nn.BatchNorm2d):
-                        for p in m[1].parameters():
-                            if p.requires_grad:
-                                yield p
-
-# DeepLab_V3_Plus(1,1)(torch.rand(4, 1, 512, 512)).shape
-# torch.Size([4, 1, 512, 512])
+DeepLab_V3_Plus(1,1)(torch.rand(4, 1, 512, 512)).shape
+torch.Size([4, 1, 512, 512])
